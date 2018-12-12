@@ -7,7 +7,7 @@ library(plyr)
 library(reshape2)
 library(ggplot2)
 library(shinydashboard)
-#library(leaflet)
+library(plotly)
 
 #prepare DF for lineplot and scatterplot
 myDF <- read.csv('data.csv')
@@ -43,7 +43,7 @@ body <- dashboardBody(
       tabPanel("Humor", h4(imageOutput("image1")), h3(textOutput("test")),icon = icon("frown-o")),
       tabPanel("Global CO2 emission", h3(textOutput("year")),htmlOutput("geoplot"),icon = icon("map-o")),
       tabPanel("Comparing CO2 emissions for selected countries", h3(textOutput("range")),plotOutput("lineplot"),icon = icon("line-chart")),
-      tabPanel("GDP vs CO2", h3(textOutput("range2")),plotOutput("plot"),icon = icon("bar-chart-o")),
+      tabPanel("GDP vs CO2", h3(textOutput("range2")),plotlyOutput(outputId="plot", height=600),icon = icon("bar-chart-o")),
       tabPanel("Help", h4(htmlOutput("helptext")),icon = icon("info-circle"))
       )
   )
@@ -114,17 +114,18 @@ server<-function(input, output){
     ggplot(co2_filtered(),aes(x=Year,y=Value))+ylab("CO2 emission (metric tons per capita)")+geom_line(aes(colour=Country.Name), size=2)
   })
   
-  output$plot<-renderPlot({
-    #ntable<-as.data.frame(cbind(as.character(co2_filtered()$Country.Name), format(co2_filtered()$Value, digits=2), format(gdp_filtered()$Value/1e9, digits=2)))
-    ntable<-as.data.frame(cbind(as.character(co2_filtered()$Country.Name), co2_filtered()$Value, round(gdp_filtered()$Value/1e9, digits=2)))
-    names(ntable)<-c("Country", "CO2", "GDP")
+  output$plot<-renderPlotly({
+    ntable<-as.data.frame(cbind(as.character(co2_filtered()$Country.Name), co2_filtered()$Year, co2_filtered()$Value, round(gdp_filtered()$Value/1e9, digits=2)))
+    names(ntable)<-c("Country", "Year", "CO2", "GDP")
     ntable$CO2 <-as.numeric(levels(ntable$CO2))[ntable$CO2]
     ntable$GDP <-as.numeric(levels(ntable$GDP))[ntable$GDP]
-    max=max(ntable$CO2)
-    min=min(ntable$CO2)
-    #yticks=format(seq(min, max, length=10), digits=2)
-    yticks=round(seq(min, max, length=10), digits=2)
-    ggplot(ntable, aes(x=GDP, y=CO2, color=Country))+geom_point(size=3)+xlab("GDP(USD billion)")+ylab("CO2 emission (metric tons per capita)")+ggtitle("CO2 emission vs. GDP")+scale_y_continuous(breaks=yticks)+theme(text=element_text(size=15),axis.text.x  = element_text(angle=90))
+    ntable$Year <-as.numeric(levels(ntable$Year))[ntable$Year]
+    plot_ly(ntable, x=~Year, y=~GDP, z=~CO2, color=~Country, type="scatter3d")%>%
+      add_markers()%>%
+      layout(scene = list(xaxis = list(title = 'Year'),
+                          yaxis = list(title = 'GDP (Billion US$)'),
+                          zaxis = list(title = 'CO2 emission (metric tons per capita')),
+             showlegend=FALSE)
   })
     
 }
