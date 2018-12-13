@@ -8,12 +8,13 @@ library(reshape2)
 library(ggplot2)
 library(shinydashboard)
 
-
 #prepare DF for lineplot and scatterplot
 myDF <- read.csv('data.csv')
 names(myDF)[5:length(names(myDF))]<-gsub("X","",names(myDF)[5:length(names(myDF))])
 #replicate DF for geomap, so that countries that have NA don't get published
 myDF2 = myDF
+myDF2$Country.Name<-mapvalues(myDF2$Country.Name, from="Russian Federation", to="Russia")
+
 myDF[is.na(myDF)]<-0
 #create the year list
 col_name<-as.data.frame(names(myDF))
@@ -33,6 +34,7 @@ gdp_t<-melt(gdpDF,id=c("Country.Name","Country.Code", "Indicator.Name","Indicato
 colnames(gdp_t)[colnames(gdp_t)=="variable"]<-"Year"
 colnames(gdp_t)[colnames(gdp_t)=="value"]<-"Value"
 gdp_t$Year<-as.numeric(levels(gdp_t$Year)[gdp_t$Year])
+
 
 body <- dashboardBody(
   fluidRow(
@@ -117,7 +119,7 @@ server<-function(input, output){
   output$plot<-renderPlot({
     #ntable<-as.data.frame(cbind(as.character(co2_filtered()$Country.Name), format(co2_filtered()$Value, digits=2), format(gdp_filtered()$Value/1e9, digits=2)))
     ntable<-as.data.frame(cbind(as.character(co2_filtered()$Country.Name), co2_filtered()$Value, round(gdp_filtered()$Value/1e9, digits=2)))
-    names(ntable)<-c("Country", "CO2", "GDP")
+    names(ntable)<-c("Country","CO2", "GDP")
     ntable$CO2 <-as.numeric(levels(ntable$CO2))[ntable$CO2]
     ntable$GDP <-as.numeric(levels(ntable$GDP))[ntable$GDP]
     max=max(ntable$CO2)
